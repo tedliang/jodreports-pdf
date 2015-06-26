@@ -41,6 +41,18 @@
             <artifactId>easystream</artifactId>
             <version>1.2.15</version>
         </dependency>
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>4.12</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.pdfbox</groupId>
+            <artifactId>pdfbox</artifactId>
+            <version>1.8.9</version>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
     <build>
         <plugins>

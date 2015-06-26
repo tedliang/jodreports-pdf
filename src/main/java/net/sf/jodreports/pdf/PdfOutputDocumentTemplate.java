@@ -1,6 +1,6 @@
 //
-// JOOReports - The Open Source Java/OpenOffice Report Engine
-// Copyright (C) 2004-2006 - Mirko Nasato <mirko@artofsolving.com>
+// JOOReports - The Open Source Java/OpenOffice Report PDF output extension
+// Copyright (C) 2004-2015 - Ted Liang <tedliang@gmail.com>
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -29,62 +29,61 @@ import java.util.Map;
 
 public class PdfOutputDocumentTemplate implements DocumentTemplate {
 
-    private final DocumentTemplate odtOutputDocumentTemplate;
+    private final DocumentTemplate decoratedTemplate;
 
     private final PdfOptions pdfOptions;
 
-    public PdfOutputDocumentTemplate(DocumentTemplate odtOutputDocumentTemplate) {
-        this(odtOutputDocumentTemplate, PdfOptions.create());
+    public PdfOutputDocumentTemplate(DocumentTemplate decoratedTemplate) {
+        this(decoratedTemplate, PdfOptions.create());
     }
 
-    public PdfOutputDocumentTemplate(DocumentTemplate odtOutputDocumentTemplate, PdfOptions pdfOptions) {
-        this.odtOutputDocumentTemplate = odtOutputDocumentTemplate;
+    public PdfOutputDocumentTemplate(DocumentTemplate decoratedTemplate, PdfOptions pdfOptions) {
+        this.decoratedTemplate = decoratedTemplate;
         this.pdfOptions = pdfOptions;
     }
 
+    @Override
     public void setXmlEntries(String[] xmlEntries) {
-        this.odtOutputDocumentTemplate.setXmlEntries(xmlEntries);
+        this.decoratedTemplate.setXmlEntries(xmlEntries);
     }
 
+    @Override
     public void setContentWrapper(ContentWrapper contentWrapper) {
-        odtOutputDocumentTemplate.setContentWrapper(contentWrapper);
+        decoratedTemplate.setContentWrapper(contentWrapper);
     }
 
+    @Override
     public void setOpenDocumentSettings(Map openDocumentSettings) {
-        odtOutputDocumentTemplate.setOpenDocumentSettings(openDocumentSettings);
+        decoratedTemplate.setOpenDocumentSettings(openDocumentSettings);
     }
 
+    @Override
     public Map getConfigurations() {
-        return odtOutputDocumentTemplate.getConfigurations();
+        return decoratedTemplate.getConfigurations();
     }
 
     public PdfOptions getPdfOptions() {
         return pdfOptions;
     }
 
-    /**
-     * Merge the data model into this template and create the output document.
-     *
-     * @param model
-     * @param output
-     * @throws IOException
-     * @throws DocumentTemplateException
-     */
+    @Override
     public void createDocument(Object model, OutputStream output) throws IOException, DocumentTemplateException {
-
-        try (final OutputStreamToInputStream<OdfTextDocument> os2is = new OutputStreamToInputStream<OdfTextDocument>() {
+        try (final OutputStream pdf = output;
+             final OutputStreamToInputStream<OdfTextDocument> pipe = new OutputStreamToInputStream<OdfTextDocument>() {
             @Override
-            protected OdfTextDocument doRead(final InputStream istream) throws Exception {
-                OdfTextDocument document = OdfTextDocument.loadDocument(istream);
-                return document;
+            protected OdfTextDocument doRead(final InputStream odt) throws Exception {
+                return OdfTextDocument.loadDocument(odt);
             }
         }) {
-            odtOutputDocumentTemplate.createDocument(model, os2is);
-            PdfConverter.getInstance().convert(os2is.getResult(), output, pdfOptions);
-        } catch (Exception e) {
-            e.printStackTrace();
+            decoratedTemplate.createDocument(model, pipe);
+            PdfConverter.getInstance().convert(pipe.getResult(), pdf, pdfOptions);
         }
-
+        catch (IOException | DocumentTemplateException ex) {
+            throw ex;
+        }
+        catch (Exception e) {
+            throw new DocumentTemplateException(e);
+        }
     }
 
 }
